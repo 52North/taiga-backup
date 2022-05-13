@@ -1,0 +1,9 @@
+version: '3'
+services:
+  taiga-backup:
+    build: .
+    environment:
+      - TAIGA_USER=user
+      - TAIGA_PASSWORD=pw
+    volumes:
+      - ./data:/opt/taiga-backup/backups
