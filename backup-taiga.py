@@ -3,6 +3,9 @@ import os
 import time
 from datetime import datetime
 import shutil
+import boto3
+import botocore
+import os.path as path
 
 user = os.environ.get("TAIGA_USER", "user")
 password = os.environ.get("TAIGA_PASSWORD", "password")
@@ -33,6 +36,24 @@ requested_projects = []
 
 def upload_file(file_name):
     print("Uploading file: %s" % file_name, flush=True)
+    file_server_location = os.environ.get("FILE_SERVER_LOCATION", None)
+    
+    if file_server_location is None:
+        s3_key = os.environ.get("S3_KEY", None)
+        s3_secret = os.environ.get("S3_SECRET", None)
+        s3_region = os.environ.get("S3_REGION", None)
+        s3_bucket = os.environ.get("S3_BUCKET", None)
+        
+        s3 = boto3.client('s3',
+                            aws_access_key_id=s3_key,
+                            aws_secret_access_key=s3_secret,
+                            config=botocore.client.Config(region_name=s3_region))
+        
+        s3.upload_file(os.path.normpath(file_name), s3_bucket, file_name)
+        print("Backup uploaded to S3: %s" % [s3_region, s3_bucket, file_name], flush=True)
+    else:
+        shutil.copy(file_name, file_server_location)
+        print("Backup copied to: %s" % file_server_location, flush=True)
     # TODO upload to file server or S3
 
 def download_export(r, target_folder):

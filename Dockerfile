@@ -1,6 +1,6 @@
 FROM python:alpine3.15
 
-RUN pip install requests
+RUN pip install requests boto3
 RUN mkdir -p /opt/taiga-backup/backups
 COPY backup-taiga.py /opt/taiga-backup/
 
