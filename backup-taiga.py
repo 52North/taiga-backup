@@ -10,6 +10,8 @@ import os.path as path
 user = os.environ.get("TAIGA_USER", "user")
 password = os.environ.get("TAIGA_PASSWORD", "password")
 
+TAIGA_THROTTLE_TIME_SECONDS = 60
+
 # login
 x = post("https://api.taiga.io/api/v1/auth", json={
         "password": password,
@@ -83,15 +85,28 @@ print("Starting backup at: %s" % datetime.now(), flush=True)
 backup_date = datetime.today().strftime("%Y-%m-%d")
 target_folder = "backups/" + backup_date
 os.makedirs(target_folder, exist_ok=True)
+
+
+project_export_ts = 0
 for p in projects_json:
+    # check if the last export is younger than the TAIGA_THROTTLE_TIME_SECONDS (60 seconds)
+    sleep_time_candidate = TAIGA_THROTTLE_TIME_SECONDS - (int(time.time()) - project_export_ts)
+    if (sleep_time_candidate) > 0:
+        # wait until the throttle timeout exceeds
+        time.sleep(sleep_time_candidate)
+    
+    # store the latest export time
+    project_export_ts = int(time.time())
     export_url = "https://api.taiga.io/api/v1/exporter/%s" % p["id"]
     x = get(export_url, headers={"Authorization": "Bearer %s" % bearer_token})
     project_json = x.json()
     
     k = 0
     while "export_id" not in project_json:
+        # this should not happen too often, maybe when taiga changes the throttle timeout
         print("export still throttled: %s" % project_json, flush=True)
         time.sleep(15)
+        project_export_ts = int(time.time())
         x = get(export_url, headers={"Authorization": "Bearer %s" % bearer_token})
         project_json = x.json()
         
